@@ -1,134 +1,55 @@
 #include <Arduino.h>
-#include "EEPROMData.h"
-
 #include <ArduinoRS485.h> // ArduinoModbus depends on the ArduinoRS485 library
 #include <ArduinoModbus.h>
 
-#define LEAKSENSORADDRESS 0x20
-#define LEAKSENSORTYPE 0x20
-
-#define LEAKSENSOR1 A0
-#define LEAKSENSOR2 A1
-#define LEAKSENSOR3 A2
-#define VOLTSENSE A3
-#define DIR 4
-#define SENSORPWR 5
-#define RELAY 6
-#define LED 7
-#define SENSORTESTTIMEMULTIPLYER 1000
-
-#define SENSORHIGHFAULT 3
-#define SENSORFAULT 2
-#define SENSORWATERDETECT 1
-#define SENSOROK 0
+#include "EEPROMData.h"
+#include "Sensor.h"
+#include "Define.h"
 
 unsigned long previousMillis = 0;
 unsigned long previousLEDMillis = 0;
-int SenorWaterFault = 550;
-int SenorWaterTripThreshold = 300;
-int SenorDisconectedThreshold = 600;
-int SenorVoltageHighThreshold = 800;
-int SenorVoltageLowThreshold = 270;
 unsigned int SensorTestTime = 3;
-
-char LeakSenor[5] = {SENSOROK,SENSOROK,SENSOROK,SENSOROK};
-
-char SensorValueCheck(double ValueIn);
-char ReadSensors();
-
-char ReadSensors(){
-  digitalWrite(SENSORPWR, HIGH);
-  delay(50);
-  float VoltSense = analogRead(VOLTSENSE)/1025.0*5*2;
-  //Serial.print(" SensorVoltage = ");
-  //Serial.println(VoltSense);
-    if((VoltSense >= SenorVoltageLowThreshold/100) and (VoltSense <= SenorVoltageHighThreshold/100)){
-    LeakSenor[0] = SENSOROK;
-    //Serial.println("Sensor Voltage Ok");
-  }
-  else{
-    LeakSenor[0] = SENSORFAULT;
-    //Serial.println("Sensor Voltage Out Of Range");
-    digitalWrite(SENSORPWR, LOW);
-    return 0;
-  }
-  double SensorA = 0;
-  double SensorB = 0;
-  double SensorC = 0;
-  for(char i = 0;i<5;i++){
-    SensorA += analogRead(LEAKSENSOR1);
-    SensorB += analogRead(LEAKSENSOR2);
-    SensorC += analogRead(LEAKSENSOR3);
-  }
-  SensorA = SensorA/5;
-  SensorB = SensorB/5;
-  SensorC = SensorC/5;
-  LeakSenor[1] = SensorValueCheck(SensorA);
-  LeakSenor[2] = SensorValueCheck(SensorB);
-  LeakSenor[3] = SensorValueCheck(SensorC);
-  digitalWrite(SENSORPWR, LOW);
-  return 0;
-}
-
-char SensorValueCheck(double ValueIn){
-  if(ValueIn > SenorWaterFault){
-    return SENSORHIGHFAULT;
-  }
-  else if((ValueIn < SenorWaterFault) and (ValueIn > SenorDisconectedThreshold)){
-    return SENSOROK;
-  }
-  else{
-    return SENSORWATERDETECT;
-  }
-}
-
-char RelayCheck(){
-  char error = 0;
-  unsigned char k;
-  for( k= 0;k<5;k++){
-    if(LeakSenor[k] != SENSOROK){
-      error++;
-    }
-  }
-  if(error){
-    digitalWrite(RELAY, HIGH);
-    ModbusRTUServer.discreteInputWrite(4, 1);
-    return  0;
-  }
-  else{
-    digitalWrite(RELAY, LOW);
-    ModbusRTUServer.discreteInputWrite(4, 0);
-    return  1;
-  }
-}
 
 void ComunicationUpdate(){
   ModbusRTUServer.poll();
-/*   int coilValue = ModbusRTUServer.coilRead(0x00);
-  if (coilValue == 0x11) {
+  long holdingRegisterValue = ModbusRTUServer.holdingRegisterRead(0);
+  if (holdingRegisterValue == SENSOR_CHANGE_ADDRESS) {
     //NewAddress
-    SetAddressFromEEPROM(ModbusRTUServer.coilRead(0x01));
+    SetAddressFromEEPROM((char)ModbusRTUServer.holdingRegisterRead(1));
   }
-  else if (coilValue == 0x12) {
+  else if (holdingRegisterValue == SENSOR_CHANGE_SCANRATE) {
     //NewScanRate
-    SetScanRateFromEEPROM(ModbusRTUServer.coilRead(0x01));
-  }  */
-  // else if (coilValue == 0x13) {
-  //   //Turn On LED
-  //   //SetScanRateFromEEPROM(ModbusRTUServer.coilRead(0x01);
-  // } 
-  // else if (coilValue == 0x14) {
-  //   //SensorFault_Open
-  //   //SetScanRateFromEEPROM((ModbusRTUServer.coilRead(0x01)<<8) | ModbusRTUServer.coilRead(0x02));
-  // } 
-  ModbusRTUServer.inputRegisterWrite(1, LeakSenor[0]);
-  ModbusRTUServer.inputRegisterWrite(2, LeakSenor[1]);
-  ModbusRTUServer.inputRegisterWrite(3, LeakSenor[2]);
-  ModbusRTUServer.inputRegisterWrite(4, LeakSenor[3]);
+    SetScanRateFromEEPROM((char)ModbusRTUServer.holdingRegisterRead(1));
+  }
+  else if (holdingRegisterValue == SENSOR_CHANGE_FAULT) {
+     SetSensorWaterDetect((int)ModbusRTUServer.holdingRegisterRead(1));
+  }
+  else if (holdingRegisterValue == SENSOR_CHANGE_SENSOR_OPEN) {
+    SensorWaterDisconected((int)ModbusRTUServer.holdingRegisterRead(1));
+  }
+  else{
+    //Do Nothing, Wrong Config
+    digitalWrite(LED,!digitalRead(LED));
+    delay(50);
+    digitalWrite(LED,!digitalRead(LED));
+    delay(50);
+    digitalWrite(LED,!digitalRead(LED));
+    delay(50);
+    digitalWrite(LED,!digitalRead(LED));
+    delay(50);
+  }
+  ModbusRTUServer.inputRegisterWrite(1, ReadSensorValues(SENSOR_BIAS));
+  ModbusRTUServer.inputRegisterWrite(2, ReadSensorValues(SENSOR_INPUT_1));
+  ModbusRTUServer.inputRegisterWrite(3, ReadSensorValues(SENSOR_INPUT_2));
+  ModbusRTUServer.inputRegisterWrite(4, ReadSensorValues(SENSOR_INPUT_3));
+  ModbusRTUServer.coilWrite(SENSOR_RELAY, ReadRelayState());
 }
 
 void setup() {
+  //SetAddressFromEEPROM(LEAKSENSORADDRESS);
+  //SetScanRateFromEEPROM(3);
   Serial.begin(38400);
+
   pinMode(DIR,OUTPUT);
   pinMode(LED,OUTPUT);
   pinMode(SENSORPWR,OUTPUT);
@@ -137,58 +58,64 @@ void setup() {
   digitalWrite(LED,LOW);
   digitalWrite(SENSORPWR,LOW);
   digitalWrite(RELAY,LOW);
-  //Serial.println("Start");
-  //char Adr = GetAddressFromEEPROM();
-  //if(Adr == -1){
-  if (!ModbusRTUServer.begin(LEAKSENSORADDRESS, 38400)) {
-    Serial.println("Failed to start Modbus RTU Server!");
-    while (1);
+
+  char Adr = GetAddressFromEEPROM();
+  if(Adr == -1){
+    if (!ModbusRTUServer.begin(LEAKSENSORADDRESS, 38400)) {
+      Serial.println("Failed to start Modbus RTU Server!");
+      while (1);
+    }
   }
-/*   if (!ModbusRTUServer.begin(RS485Class(Serial, 1, 4,0), 42, 38400)) {
-    Serial.println("Failed to start Modbus RTU Server!");
-    while (1);
-  } */
-/*   }
   else{
     if (!ModbusRTUServer.begin(Adr, 38400)) {
       Serial.println("Failed to start Modbus RTU Server!");
       while (1);
     }
+  }
+/*   if (!ModbusRTUServer.begin(RS485Class(Serial, 1, 4,0), 42, 38400)) {
+    Serial.println("Failed to start Modbus RTU Server!");
+    while (1);
   } */
-  //char ScanRate = GetScanRateFromEEPROM();
-  //if(ScanRate == -1){
-  //  SensorTestTime = ScanRate;
-  //}
-  // configure a single coil at address 0x00
-  ModbusRTUServer.configureCoils(0x00, 3); //Relay Control
-  ModbusRTUServer.configureInputRegisters(0x00, 5);  //Leak Sensor Values
-  ModbusRTUServer.inputRegisterWrite(0, LEAKSENSORTYPE);
-  ModbusRTUServer.coilWrite(0x00, 1); //Sensor Scan Enable
-  ModbusRTUServer.coilWrite(0x01, 1); //LED Control
-  ModbusRTUServer.coilWrite(0x02, 0); //Relay Control
-  // put your setup code here, to run once:
 
-  SetAddressFromEEPROM(LEAKSENSORADDRESS);
-  GetAddressFromEEPROM();
-  Serial.print("Scan Rate : ");
-  SetScanRateFromEEPROM(3);
-  Serial.println(GetScanRateFromEEPROM()+41);
+
+  // configure a single coil at address 0x00
+  ModbusRTUServer.configureCoils(0x00, 4); //Relay Control [Sensor "scan" Enable,Enable blinking LED,Enable Auto Relay Control, Relay]
+  ModbusRTUServer.configureInputRegisters(0x00, 5);  //Leak Sensor Values [SensorType,BiasVoltage Test,S1 Test,S2 Test,S3 Test]
+  ModbusRTUServer.configureHoldingRegisters(0x00, 2); //Control I/O 
+  ModbusRTUServer.inputRegisterWrite(0, LEAKSENSORTYPE);// Add Sensor Type, this is fixed. 
+  ModbusRTUServer.coilWrite(SENSOR_SCAN_EN, 1); //Sensor Scan Enable - Default ON
+  ModbusRTUServer.coilWrite(SENSOR_LED_CONTROL, 1); //LED Control - Default ON
+  ModbusRTUServer.coilWrite(AUTO_SENSOR_RELAY_CONTROL, 1); //Auto Relay Control - Default ON
+  ModbusRTUServer.coilWrite(SENSOR_RELAY, 0); //Relay Control - Default OFF
+
+  char ScanRate = GetScanRateFromEEPROM();
+  if(ScanRate != -1){
+    SensorTestTime = ScanRate;
+  }
+  else{
+    SensorTestTime = SENSORSCANRATE;
+  }
 }
 
 void loop() {
   ComunicationUpdate();
   unsigned long currentMillis = millis();
-  if(ModbusRTUServer.coilRead(0)){
+  if(ModbusRTUServer.coilRead(SENSOR_SCAN_EN)){
     if (currentMillis - previousMillis >= SensorTestTime*SENSORTESTTIMEMULTIPLYER) {
       previousMillis = currentMillis;
       ReadSensors();
-      RelayCheck();
+      if(ModbusRTUServer.coilRead(AUTO_SENSOR_RELAY_CONTROL)){
+        RelayCheck();
+      }
     }
   }
-  if(ModbusRTUServer.coilRead(1)){
+  if(ModbusRTUServer.coilRead(SENSOR_LED_CONTROL)){
     if (currentMillis - previousLEDMillis >= 500) {
       previousLEDMillis = currentMillis;
       digitalWrite(LED,!digitalRead(LED));
     }
+  }
+  if(ModbusRTUServer.coilRead(AUTO_SENSOR_RELAY_CONTROL) == 0){
+    digitalWrite(RELAY, ModbusRTUServer.coilRead(SENSOR_RELAY));
   }
 }
