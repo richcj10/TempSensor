@@ -38,16 +38,16 @@ void ComunicationUpdate(){
     digitalWrite(LED,!digitalRead(LED));
     delay(50);
   }
-  ModbusRTUServer.inputRegisterWrite(1, ReadSensorValues(SENSOR_BIAS));
-  ModbusRTUServer.inputRegisterWrite(2, ReadSensorValues(SENSOR_INPUT_1));
-  ModbusRTUServer.inputRegisterWrite(3, ReadSensorValues(SENSOR_INPUT_2));
-  ModbusRTUServer.inputRegisterWrite(4, ReadSensorValues(SENSOR_INPUT_3));
+  ModbusRTUServer.inputRegisterWrite(2, GetSensorValues(SENSOR_INPUT_VIN));
+  ModbusRTUServer.inputRegisterWrite(3, ReadSensorValues(SENSOR_BIAS));
+  ModbusRTUServer.inputRegisterWrite(4, ReadSensorValues(SENSOR_INPUT_1));
+  ModbusRTUServer.inputRegisterWrite(5, ReadSensorValues(SENSOR_INPUT_2));
+  ModbusRTUServer.inputRegisterWrite(6, ReadSensorValues(SENSOR_INPUT_3));
+
   ModbusRTUServer.coilWrite(SENSOR_RELAY, ReadRelayState());
 }
 
 void setup() {
-  //SetAddressFromEEPROM(LEAKSENSORADDRESS);
-  //SetScanRateFromEEPROM(3);
   Serial.begin(38400);
 
   pinMode(DIR,OUTPUT);
@@ -72,17 +72,12 @@ void setup() {
       while (1);
     }
   }
-/*   if (!ModbusRTUServer.begin(RS485Class(Serial, 1, 4,0), 42, 38400)) {
-    Serial.println("Failed to start Modbus RTU Server!");
-    while (1);
-  } */
-
 
   // configure a single coil at address 0x00
-  ModbusRTUServer.configureCoils(0x00, 4); //Relay Control [Sensor "scan" Enable,Enable blinking LED,Enable Auto Relay Control, Relay]
-  ModbusRTUServer.configureInputRegisters(0x00, 5);  //Leak Sensor Values [SensorType,BiasVoltage Test,S1 Test,S2 Test,S3 Test]
-  ModbusRTUServer.configureHoldingRegisters(0x00, 2); //Control I/O 
-  ModbusRTUServer.inputRegisterWrite(0, LEAKSENSORTYPE);// Add Sensor Type, this is fixed. 
+  ModbusRTUServer.configureCoils(0x01, 4); //Relay Control [Sensor "scan" Enable,Enable blinking LED,Enable Auto Relay Control, Relay]
+  ModbusRTUServer.configureInputRegisters(0x01, 6);  //Leak Sensor Values [SensorType,BiasVoltage Test,S1 Test,S2 Test,S3 Test]
+  ModbusRTUServer.configureHoldingRegisters(0x01, 3); //Control I/O 
+  ModbusRTUServer.inputRegisterWrite(1, LEAKSENSORTYPE);// Add Sensor Type, this is fixed. 
   ModbusRTUServer.coilWrite(SENSOR_SCAN_EN, 1); //Sensor Scan Enable - Default ON
   ModbusRTUServer.coilWrite(SENSOR_LED_CONTROL, 1); //LED Control - Default ON
   ModbusRTUServer.coilWrite(AUTO_SENSOR_RELAY_CONTROL, 1); //Auto Relay Control - Default ON
