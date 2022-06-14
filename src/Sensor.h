@@ -5,6 +5,7 @@
 #define SENSOR_INPUT_1 1
 #define SENSOR_INPUT_2 2
 #define SENSOR_INPUT_3 3
+#define SENSOR_INPUT_VIN 4
 
 char SensorValueCheck(double ValueIn);
 char ReadSensors();
@@ -13,5 +14,7 @@ char ReadRelayState();
 char ReadSensorValues(unsigned char Value);
 void SetSensorWaterDetect(unsigned int Value);
 void SensorWaterDisconected(unsigned int Value);
+float GetSensorValues(char Sensor);
+void SampleVin();
 
 #endif

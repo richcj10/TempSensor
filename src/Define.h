@@ -6,6 +6,7 @@
 #define LEAKSENSOR2 A1
 #define LEAKSENSOR3 A2
 #define VOLTSENSE A3
+#define VIN A4
 #define DIR 4
 #define SENSORPWR 5
 #define RELAY 6
@@ -32,5 +33,6 @@
 #define SENSORFAULT 2
 #define SENSORWATERDETECT 1
 #define SENSOROK 0
+#define VOLT_AVG 10
 
 #endif

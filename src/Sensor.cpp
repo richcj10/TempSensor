@@ -10,6 +10,10 @@ unsigned int SenorDisconectedThreshold = 600;
 //This is hard coded, board Level issue
 int SenorVoltageHighThreshold = 800;
 int SenorVoltageLowThreshold = 270;
+float Vin = 0;
+int VinAdc[VOLT_AVG];      // the readings from the analog input
+int readIndex = 0;              // the index of the current reading
+long Vintotal = 0;     
 
 char LeakSenor[5] = {SENSOROK,SENSOROK,SENSOROK,SENSOROK};
 
@@ -45,6 +49,27 @@ char ReadSensors(){
   LeakSenor[3] = SensorValueCheck(SensorC);
   digitalWrite(SENSORPWR, LOW);
   return 0;
+}
+
+void SampleVin(){
+  Vintotal = Vintotal - VinAdc[readIndex];
+  // read from the sensor:
+  VinAdc[readIndex] = analogRead(VIN);
+  // add the reading to the total:
+  Vintotal = Vintotal + VinAdc[readIndex];
+  // advance to the next position in the array:
+  readIndex = readIndex + 1;
+
+  // if we're at the end of the array...
+  if (readIndex >= VOLT_AVG) {
+    // ...wrap around to the beginning:
+    readIndex = 0;
+  }
+
+  // calculate the average:
+  Vin = (Vintotal / VOLT_AVG)*(5.1/1024)*5.6;
+  //Serial.print("Vin = ");
+  //Serial.println(Vin);
 }
 
 char SensorValueCheck(double ValueIn){
@@ -93,4 +118,8 @@ void SetSensorWaterDetect(unsigned int Value){
 
 void SensorWaterDisconected(unsigned int Value){
     SenorDisconectedThreshold = Value;
+}
+
+float GetSensorValues(char Sensor){
+  return Vin;
 }

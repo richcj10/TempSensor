@@ -27,18 +27,8 @@ void ComunicationUpdate(){
   else if (holdingRegisterValue == SENSOR_CHANGE_SENSOR_OPEN) {
     SensorWaterDisconected((int)ModbusRTUServer.holdingRegisterRead(1));
   }
-  else{
-    //Do Nothing, Wrong Config
-    digitalWrite(LED,!digitalRead(LED));
-    delay(50);
-    digitalWrite(LED,!digitalRead(LED));
-    delay(50);
-    digitalWrite(LED,!digitalRead(LED));
-    delay(50);
-    digitalWrite(LED,!digitalRead(LED));
-    delay(50);
-  }
-  ModbusRTUServer.inputRegisterWrite(2, GetSensorValues(SENSOR_INPUT_VIN));
+
+  ModbusRTUServer.inputRegisterWrite(2, GetSensorValues(SENSOR_INPUT_VIN)*100);
   ModbusRTUServer.inputRegisterWrite(3, ReadSensorValues(SENSOR_BIAS));
   ModbusRTUServer.inputRegisterWrite(4, ReadSensorValues(SENSOR_INPUT_1));
   ModbusRTUServer.inputRegisterWrite(5, ReadSensorValues(SENSOR_INPUT_2));
@@ -90,6 +80,10 @@ void setup() {
   else{
     SensorTestTime = SENSORSCANRATE;
   }
+  char k = 0;
+  for(k=0;k<10;k++){
+    SampleVin();
+  }
 }
 
 void loop() {
@@ -99,6 +93,7 @@ void loop() {
     if (currentMillis - previousMillis >= SensorTestTime*SENSORTESTTIMEMULTIPLYER) {
       previousMillis = currentMillis;
       ReadSensors();
+      SampleVin();
       if(ModbusRTUServer.coilRead(AUTO_SENSOR_RELAY_CONTROL)){
         RelayCheck();
       }
