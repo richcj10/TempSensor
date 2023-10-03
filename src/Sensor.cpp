@@ -15,21 +15,33 @@ int VinAdc[VOLT_AVG];      // the readings from the analog input
 int readIndex = 0;              // the index of the current reading
 long Vintotal = 0;     
 
-char LeakSenor[5] = {SENSOROK,SENSOROK,SENSOROK,SENSOROK};
+int ADCValue[5] = {0,0,0,0,0};
+float TempResult[4] = {0,0,0,0};
+
+const float A = 0.000686524426;
+const float B = 0.000244478897;
+const float C = 0.000000019057;
+
+float R1 = 10000; //62330 ohm Total Pull - up resistors in series that I used.
+float TempK;
+float Vout;
+float TempC;
+float R2;
+float logR2;
 
 char RelayState = 0;
 
 char ReadSensors(){
   digitalWrite(SENSORPWR, HIGH);
-  delay(50);
+  delay(150);
   float VoltSense = analogRead(VOLTSENSE)/1025.0*5*2;
   //Serial.print(" SensorVoltage = ");
   //Serial.println(VoltSense);
-    if((VoltSense >= SenorVoltageLowThreshold/100) and (VoltSense <= SenorVoltageHighThreshold/100)){
-    LeakSenor[0] = SENSOROK;
+  if((VoltSense >= SenorVoltageLowThreshold/100) and (VoltSense <= SenorVoltageHighThreshold/100)){
+    TempResult[0] = SENSOROK;
   }
   else{
-    LeakSenor[0] = SENSORFAULT;
+    TempResult[0] = SENSORFAULT;
     digitalWrite(SENSORPWR, LOW);
     return 0;
   }
@@ -37,18 +49,19 @@ char ReadSensors(){
   double SensorB = 0;
   double SensorC = 0;
   for(char i = 0;i<5;i++){
-    SensorA += analogRead(LEAKSENSOR1);
-    SensorB += analogRead(LEAKSENSOR2);
-    SensorC += analogRead(LEAKSENSOR3);
+    SensorA += (double)analogRead(TEMPSENSOR1);
+    SensorB += (double)analogRead(TEMPSENSOR2);
+    SensorC += (double)analogRead(TEMPSENSOR3);
   }
   SensorA = SensorA/5;
   SensorB = SensorB/5;
   SensorC = SensorC/5;
-  LeakSenor[1] = SensorValueCheck(SensorA);
-  LeakSenor[2] = SensorValueCheck(SensorB);
-  LeakSenor[3] = SensorValueCheck(SensorC);
+  VoltSense = analogRead(VOLTSENSE)/1025.0*5*2;
+  TempResult[1] = TempConverter(SensorA,VoltSense);
+  TempResult[2] = TempConverter(SensorB,VoltSense);
+  TempResult[3] = TempConverter(SensorC,VoltSense);
   digitalWrite(SENSORPWR, LOW);
-  return 0;
+  return 1;
 }
 
 void SampleVin(){
@@ -72,40 +85,40 @@ void SampleVin(){
   //Serial.println(Vin);
 }
 
-char SensorValueCheck(double ValueIn){
-  if(ValueIn > SenorVoltageHighThreshold){
-    return SENSORHIGHFAULT;
+float TempConverter(double ValueIn,float Vref){
+  double steinhart = 0;
+  float voltage = 5*(ValueIn/1024);
+  //Serial.print("voltage = ");
+  //Serial.println(voltage);
+  //Serial.print("Vref = ");
+  //Serial.println(Vref);
+  float R = (voltage / ((Vref - voltage)/10000.0));
+  if(R<0){
+    return 555.99;
   }
-  else if((ValueIn > SenorWaterFault) and (ValueIn < SenorDisconectedThreshold)){
-    return SENSOROK;
-  }
-  else{
-    return SENSORWATERDETECT;
-  }
+  //Serial.print("Res = ");
+  //Serial.println(R);
+  steinhart = R/THERMISTORNOMINAL;     // (R/Ro)  
+  steinhart = log(steinhart);                  // ln(R/Ro) 
+  steinhart /= BCOEFFICIENT;                   // 1/B * ln(R/Ro)  
+  steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart;
+  steinhart -= 273.15; 
+
+/*   logR2 = log(R);
+  TempK = 1.0 / (A + B * logR2 + C * logR2 * logR2 * logR2);
+  TempC = TempK - 273.15; */
+  //Serial.print("steinhart = ");
+  //Serial.println(steinhart);
+  return steinhart;
+}
+
+float ReadSensorValues(unsigned char Value){
+    return TempResult[Value];
 }
 
 char RelayCheck(){
-  char error = 0;
-  unsigned char k;
-  for( k= 0;k<5;k++){
-    if(LeakSenor[k] != SENSOROK){
-      error++;
-    }
-  }
-  if(error){
-    digitalWrite(RELAY, HIGH);
-    RelayState = 1;
-    return  0;
-  }
-  else{
-    digitalWrite(RELAY, LOW);
-    RelayState = 0;
-    return  1;
-  }
-}
-
-char ReadSensorValues(unsigned char Value){
-    return LeakSenor[Value];
+  return 0;
 }
 
 char ReadRelayState(){

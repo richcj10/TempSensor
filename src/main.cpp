@@ -30,9 +30,9 @@ void ComunicationUpdate(){
 
   ModbusRTUServer.inputRegisterWrite(2, GetSensorValues(SENSOR_INPUT_VIN)*100);
   ModbusRTUServer.inputRegisterWrite(3, ReadSensorValues(SENSOR_BIAS));
-  ModbusRTUServer.inputRegisterWrite(4, ReadSensorValues(SENSOR_INPUT_1));
-  ModbusRTUServer.inputRegisterWrite(5, ReadSensorValues(SENSOR_INPUT_2));
-  ModbusRTUServer.inputRegisterWrite(6, ReadSensorValues(SENSOR_INPUT_3));
+  ModbusRTUServer.inputRegisterWrite(4, ReadSensorValues(SENSOR_INPUT_1)*100);
+  ModbusRTUServer.inputRegisterWrite(5, ReadSensorValues(SENSOR_INPUT_2)*100);
+  ModbusRTUServer.inputRegisterWrite(6, ReadSensorValues(SENSOR_INPUT_3)*100);
 
   ModbusRTUServer.coilWrite(SENSOR_RELAY, ReadRelayState());
 }

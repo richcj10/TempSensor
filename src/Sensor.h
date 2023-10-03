@@ -7,11 +7,17 @@
 #define SENSOR_INPUT_3 3
 #define SENSOR_INPUT_VIN 4
 
-char SensorValueCheck(double ValueIn);
+#define SERIESRESISTOR 10000
+
+#define THERMISTORNOMINAL 10000      // temp. for nominal resistance (almost always 25 C) 
+#define TEMPERATURENOMINAL 25
+#define BCOEFFICIENT 3950
+
+float TempConverter(double ValueIn,float Vref);
 char ReadSensors();
 char RelayCheck();
 char ReadRelayState();
-char ReadSensorValues(unsigned char Value);
+float ReadSensorValues(unsigned char Value);
 void SetSensorWaterDetect(unsigned int Value);
 void SensorWaterDisconected(unsigned int Value);
 float GetSensorValues(char Sensor);
