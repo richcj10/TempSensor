@@ -1,43 +1,49 @@
+#include <Arduino.h>
 #include "INA260.h"
-#include <Adafruit_INA260.h>
 #include "Com.h"
+#include <Wire.h>
 
-Adafruit_INA260 ina260 = Adafruit_INA260();
+float INACurrentRead(unsigned char i);
+float INAVoltageRead(unsigned char i);
+int INARead(unsigned char i);
 
 void INASetup(){
-  if (!ina260.begin()) {
-    Log(NOTIFY,"Couldn't find INA260 chip");
-    while (1);
-  }
-  Log(DEBUG,"Found INA260 chip");
-  // set the number of samples to average
-  ina260.setAveragingCount(INA260_COUNT_16);
-  // set the time over which to measure the current and bus voltage
-  ina260.setVoltageConversionTime(INA260_TIME_140_us);
-  ina260.setCurrentConversionTime(INA260_TIME_140_us);
+    int A,B,C = 0;
+    A = INARead(POWER_IN);
+    B = INARead(FIVE_VOLT_RAIL);
+    C = INARead(THREE_VOLT_RAIL);
+    if((A == MFG_ID) && (B == MFG_ID) && (C == MFG_ID)){
+        Log(DEBUG,"INA OK");
+    }
+    else{
+        Log(NOTIFY,"INA Issue - ");
+        if(A != MFG_ID){
+            Log(NOTIFY,"A");
+        }
+        if(B != MFG_ID){
+            Log(NOTIFY," B");
+        }
+        if(C != MFG_ID){
+            Log(NOTIFY,"INA Issue - ");
+        }
+    }
 }
 
 void ReportTemp() {
   Serial.print("Current: ");
-  Serial.print(ina260.readCurrent());
+  Serial.print(INACurrentRead(POWER_IN));
   Serial.println(" mA");
 
   Serial.print("Bus Voltage: ");
-  Serial.print(ina260.readBusVoltage());
+  Serial.print(INAVoltageRead(POWER_IN));
   Serial.println(" mV");
-
-  Serial.print("Power: ");
-  Serial.print(ina260.readPower());
-  Serial.println(" mW");
-
   Serial.println();
-  delay(1000);
 }
 
 float INACurrentRead(unsigned char i){
   Wire.beginTransmission(i); 
   //send a bit and ask for register zero
-  Wire.write(0);
+  Wire.write(INA260_REG_CURRENT);
   //end transmission
   Wire.endTransmission();
   //request 1 byte from address xx
@@ -45,7 +51,42 @@ float INACurrentRead(unsigned char i){
   //wait for response
   while(Wire.available() == 0);
   //put the temperature in variable c
-  int c = Wire.read();   
-    float Value = ((x1 << 8) + x0);
-    return Value*1.2;
+  int a = Wire.read();
+  int b = Wire.read(); 
+  float Value = ((a << 8) + b);
+  return Value*1.25;
+}
+
+float INAVoltageRead(unsigned char i){
+  Wire.beginTransmission(i); 
+  //send a bit and ask for register zero
+  Wire.write(INA260_REG_BUSVOLTAGE);
+  //end transmission
+  Wire.endTransmission();
+  //request 1 byte from address xx
+  Wire.requestFrom(i, 2);
+  //wait for response
+  while(Wire.available() == 0);
+  //put the temperature in variable c
+  int a = Wire.read();
+  int b = Wire.read(); 
+  float Value = ((a << 8) + b);
+  return Value*1.25;
+}
+
+int INARead(unsigned char i){
+  Wire.beginTransmission(i); 
+  //send a bit and ask for register zero
+  Wire.write(INA260_REG_BUSVOLTAGE);
+  //end transmission
+  Wire.endTransmission();
+  //request 1 byte from address xx
+  Wire.requestFrom(i, 2);
+  //wait for response
+  while(Wire.available() == 0);
+  //put the temperature in variable c
+  int a = Wire.read();
+  int b = Wire.read(); 
+  float Value = ((a << 8) + b);
+  return Value  
 }
