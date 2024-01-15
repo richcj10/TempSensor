@@ -29,6 +29,8 @@ float TempC;
 float R2;
 float logR2;
 
+
+char NegitiveOffsets = 0;
 char RelayState = 0;
 
 char ReadSensors(){
@@ -115,6 +117,28 @@ float TempConverter(double ValueIn,float Vref){
 
 float ReadSensorValues(unsigned char Value){
     return TempResult[Value];
+}
+
+int modifyBit(int n, int p, int b) 
+{ 
+    int mask = 1 << p; 
+    return ((n & ~mask) | (b << p)); 
+} 
+
+// This removes the negitve and adjusts the value to the left to send ov Modbus. 
+//ModBus doen't handel negitive values!!!!
+int ReadSensorValuesModBus(unsigned char Value){
+  if(TempResult[Value] < 0.0){
+    modifyBit(NegitiveOffsets,Value,1);
+  }
+  else{
+    modifyBit(NegitiveOffsets,Value,0);
+  }
+  return abs(TempResult[Value])*100;
+}
+
+int GetSignValuesModbus(){
+  return NegitiveOffsets;
 }
 
 char RelayCheck(){

@@ -28,9 +28,10 @@ void ModBusLoop(){
         InputRegs[0] = TEMPSENSORTYPE;
         InputRegs[1] = GetSensorValues(SENSOR_INPUT_VIN)*100;
         InputRegs[2] = ReadSensorValues(SENSOR_BIAS);
-        InputRegs[3] = ReadSensorValues(SENSOR_INPUT_1)*100;
-        InputRegs[4] = ReadSensorValues(SENSOR_INPUT_2)*100;
-        InputRegs[5] = ReadSensorValues(SENSOR_INPUT_3)*100;
+        InputRegs[3] = ReadSensorValuesModBus(SENSOR_INPUT_1);
+        InputRegs[4] = ReadSensorValuesModBus(SENSOR_INPUT_2);
+        InputRegs[5] = ReadSensorValuesModBus(SENSOR_INPUT_3);
+        InputRegs[6] = ReadSensorValuesModBus(SENSOR_INPUT_3);
         Time = millis();
     }
     //delay(100);
