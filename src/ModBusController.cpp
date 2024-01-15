@@ -31,7 +31,7 @@ void ModBusLoop(){
         InputRegs[3] = ReadSensorValuesModBus(SENSOR_INPUT_1);
         InputRegs[4] = ReadSensorValuesModBus(SENSOR_INPUT_2);
         InputRegs[5] = ReadSensorValuesModBus(SENSOR_INPUT_3);
-        InputRegs[6] = ReadSensorValuesModBus(SENSOR_INPUT_3);
+        InputRegs[6] = GetSignValuesModbus();
         Time = millis();
     }
     //delay(100);

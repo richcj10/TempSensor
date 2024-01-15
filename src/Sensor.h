@@ -19,6 +19,7 @@ char RelayCheck();
 char ReadRelayState();
 float ReadSensorValues(unsigned char Value);
 int ReadSensorValuesModBus(unsigned char Value);
+int GetSignValuesModbus();
 void SetSensorWaterDetect(unsigned int Value);
 void SensorWaterDisconected(unsigned int Value);
 float GetSensorValues(char Sensor);

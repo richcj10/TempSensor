@@ -2,15 +2,15 @@
 #define DEFINE_H
 
 //IO DEFINE
-#define SOM_RESET A0 //out
-#define SDCARD_EMMC A1 //out
-#define NAND_H A2 //out
-#define NAND_L A3 //out
-#define REMT_EN 3 //Out
-#define USBC_PWR_RST 5 //out
-#define PMIC_ON_REQ 7 //In
-#define POWER_3V3_EN 8 //Out
-#define POWER_5V_EN 9 //Out
+#define TEMPSENSOR1 A0
+#define TEMPSENSOR2 A1
+#define TEMPSENSOR3 A2
+#define VOLTSENSE A3
+#define VIN A4
+#define DIR 4
+#define SENSORPWR 5
+#define RELAY 6
+#define LED 7
 
 //SENSOR DEFINE
 #define TEMPSENSORADDRESS 0x20
